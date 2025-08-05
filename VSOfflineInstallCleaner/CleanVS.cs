@@ -1,8 +1,10 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Reflection.Emit;
 
 namespace VSOfflineInstallCleaner
 {
@@ -14,8 +16,6 @@ namespace VSOfflineInstallCleaner
 
             if (!exists)
                 Directory.CreateDirectory($@"{vsOfflineDirectory}\{unneededPackagesfolderName}");
-
-            //Directory.CreateDirectory($@"{vsOfflineDirectory}\{unneededPackagesfolderName}");
 
             foreach (string packageFolderName in pakagesTobeMoved)
             {
@@ -89,5 +89,15 @@ namespace VSOfflineInstallCleaner
 
             return vsFolderNames.ToHashSet();
         }
+
+        internal Catalog GetInfo(string catalogFileName)
+        {
+            string catalogFile = File.ReadAllText(catalogFileName);
+
+            Catalog catalog = JsonConvert.DeserializeObject<Catalog>(catalogFile);
+
+            return catalog;
+        }
+        
     }
 }
