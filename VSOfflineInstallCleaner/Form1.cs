@@ -8,56 +8,44 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
+
 
 namespace VSOfflineInstallCleaner
 {
     public partial class Form1 : Form
     {
+        string currentLanguage = CultureInfo.CurrentUICulture.Name;    // 获取当前UI用户界面语言
+        dynamic language = new Language().GetLanguage(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\Language.json");
+
         string vsOfflineDirectory = "";     // System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         string catalogFileName = "";        // System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\Catalog.json";
-        string removedFolderName = "ToBeRemoved";
-        string language = "";
-        string titleText = "";
+        string removedFolderName = "_Backup";
+        string title = "Visual Studio Offline Install Cleaner 2.0";
         public Form1()
         {
             InitializeComponent();
 
-            // 获取当前线程的当前UI用户界面语言
-            CultureInfo currentUICulture = CultureInfo.CurrentUICulture;
-            language = currentUICulture.Name;   // 例如 "zh-CN"
-            if (language == "zh-CN")
-            {
-                titleText = "Visual Studio 离线安装包清理器 2.0";
-                label1.Text = "Visual Studio 离线安装包文件夹";
-                label2.Text = "Visual Studio 安装包目录文件名 [ 默认为：Catalog.json ]";
-                label3.Text = "清理前的文件夹数量：";
-                label4.Text = "需要清理的文件夹数量：";
-                label5.Text = "不需要的文件夹将被移动到：";
-                label6.Text = " 文件夹";
-                lbMovetoFolderName.Text = removedFolderName;
-                button1.Text = "浏览(&B)";
-                btnClean.Text = "清理(&C)";
-                btnRefresh.Text = "刷新(&R)";
-                btnExit.Text = "退出(&E)";
-            }
-            else
-            {
-                titleText = "Visual Studio Offline Install Cleaner 2.0";
-                label1.Text = "Visual Studio Offline Directory";
-                label2.Text = "Visual Studio Offline Update Catalog FileName [ Default : Catalog.json ]";
-                label3.Text = "Number of Folder before cleanup :";
-                label4.Text = "Number of Folder Needs to be Cleaned :";
-                label5.Text = "Unneeded Folder will be moved to :";
-                label6.Text = " Folder";
-                lbMovetoFolderName.Text = removedFolderName;
-                button1.Text = "&Browse";
-                btnClean.Text = "&Clean)";
-                btnRefresh.Text = "&Refresh)";
-                btnExit.Text = "&Exit)";
-            }
-            this.Text = titleText;
+            if (language == null || language[currentLanguage] == null) { currentLanguage = "en-US"; }
 
+            if (language[currentLanguage] != null)
+            {
+                label1.Text = language[currentLanguage].Libel1;
+                label2.Text = language[currentLanguage].Libel2;
+                label3.Text = language[currentLanguage].Libel3;
+                label4.Text = language[currentLanguage].Libel4;
+                label5.Text = language[currentLanguage].Libel5;
+                label6.Text = language[currentLanguage].Libel6;
+
+                button1.Text = language[currentLanguage].Button1;
+                button2.Text = language[currentLanguage].Button2;
+                button3.Text = language[currentLanguage].Button3;
+                button4.Text = language[currentLanguage].Button4;
+                button5.Text = language[currentLanguage].Button5;
+            }
+
+            this.Text = title;
+            lbMovetoFolderName.Text = removedFolderName;
             lbFolderNamesCount.Left = label3.Left + label3.Width + 2;
             lbNeedstobeCleaned.Left = label4.Left + label4.Width + 2;
             lbMovetoFolderName.Left = label5.Left + label5.Width + 2;
@@ -72,14 +60,7 @@ namespace VSOfflineInstallCleaner
             dataGridView1.AutoGenerateColumns = false;
             DataGridViewTextBoxColumn textColumn = new DataGridViewTextBoxColumn();
             textColumn.Name = "FolderName";
-            if (language == "zh-CN")
-            {
-                textColumn.HeaderText = "文件夹名称";
-            }
-            else
-            {
-                textColumn.HeaderText = "FolderName";
-            }
+            textColumn.HeaderText = language[currentLanguage].TextColumnHeaderText;
             dataGridView1.Columns.Add(textColumn);
 
             Form1_Resize(null, null);
@@ -117,15 +98,7 @@ namespace VSOfflineInstallCleaner
             {
                 folderBrowserDialog.SelectedPath = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             }
-
-            if (language == "zh-CN")
-            {
-                folderBrowserDialog.Description = "请选择 Visual Studio 离线安装包文件夹";
-            }
-            else
-            {
-                folderBrowserDialog.Description = "Please Select Visual Studio Offline Directory";
-            }
+            folderBrowserDialog.Description = language[currentLanguage].FolderBrowserDialogDescription;
 
             // 显示对话框
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
@@ -145,14 +118,7 @@ namespace VSOfflineInstallCleaner
                 }
                 else
                 {
-                    if (language == "zh-CN")
-                    {
-                        MessageBox.Show("你选择的文件夹不是有效的 Visual Studio 离线安装包文件夹，该文件夹下应包含：nCatalog.json、vs_installer.opc、vs_setup.exe 等文件。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                    {
-                        MessageBox.Show("The folder you selected is not a valid Visual Studio offline installation package folder.The folder should contain files such as Catalog.json, vs_installer.opc, and vs_setup.exe.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    MessageBox.Show($@"{language[currentLanguage].MsgValidVsFolder}","Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -168,28 +134,49 @@ namespace VSOfflineInstallCleaner
             if (!moving) return;
             try
             {
-                string savedDiskSpace = DirectorySize.GetFolderSize($@"{vsOfflineDirectory}\{removedFolderName}");
-                if (language == "zh-CN")
-                {
-                    MessageBox.Show($@"清理过程已完成，节省了大约 {savedDiskSpace} 的磁盘空间，请删除“{removedFolderName}”文件夹以节省磁盘空间", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    MessageBox.Show($@"Cleanup process is Done, Saved about {savedDiskSpace} in disk Space, Please Remove the “{removedFolderName}” directory to Save Disk Space", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                string savedDiskSpace = DirectorySize.GetFolderSize($@"{vsOfflineDirectory}\{removedFolderName}");               
+                string msg = language[currentLanguage].MsgCleanupDoneDiskSpace;
+                MessageBox.Show(string.Format(msg, savedDiskSpace, removedFolderName), "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception)
             {
-                if (language == "zh-CN")
-                {
-                    MessageBox.Show($@"清理过程已完成，请删除 “{removedFolderName}” 文件夹以节省磁盘空间", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    MessageBox.Show($@"Cleanup process is Done, Please Remove the ""{removedFolderName}"" directory to Save Disk Space", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+
+                string msg = language[currentLanguage].MsgCleanupDoneNoDiskSpace;
+                MessageBox.Show(string.Format(msg, removedFolderName), "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             SetLabelDisplay();
+        }
+
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            HashSet<string> folderNames = new CleanVs().GetFolderNames(vsOfflineDirectory);
+            HashSet<string> packageNames = new CleanVs().GetPackageNames(catalogFileName, removedFolderName);
+            IEnumerable<string> pakagesNotListedInCatalog = folderNames.Except(packageNames).ToHashSet();
+            bool moving = false;
+            DialogResult result = DialogResult.Yes;
+
+            result = MessageBox.Show($@"{language[currentLanguage].MsgMoveToRecycle}", "Info", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            switch (result)
+            {
+                case DialogResult.Yes:
+                    moving = new CleanVs().MoveToRecycle(vsOfflineDirectory, pakagesNotListedInCatalog, true);
+                    break;
+                case DialogResult.No:
+                    moving = new CleanVs().MoveToRecycle(vsOfflineDirectory, pakagesNotListedInCatalog, false);
+                    break;
+                case DialogResult.Cancel:
+                    break;
+                default:
+                    moving = new CleanVs().MoveToRecycle(vsOfflineDirectory, pakagesNotListedInCatalog, true);
+                    break;
+            }
+            
+            SetLabelDisplay();
+            if (!moving) return;
+            if (result == DialogResult.Yes)
+            {
+                MessageBox.Show($@"{language[currentLanguage].MsgEmptyRecycleBin}", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void btnRefresh_Click(object sender, EventArgs e)
@@ -218,14 +205,7 @@ namespace VSOfflineInstallCleaner
         {
             if (String.IsNullOrEmpty(catalogFileName))
             {
-                if (language == "zh-CN")
-                {
-                    MessageBox.Show("请选择离线安装包目录文件，默认文件名为：Catalog.json", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    MessageBox.Show("Please select the offline installation package catalog file. The default file name is: Catalog.json", "Info", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show($@"{language[currentLanguage].MsgSelectCatalogFile}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             else
@@ -233,14 +213,7 @@ namespace VSOfflineInstallCleaner
                 string catalogFile = Path.GetFileName(catalogFileName);
                 if (catalogFile != "Catalog.json")
                 {
-                    if (language == "zh-CN")
-                    {
-                        MessageBox.Show("离线安装包目录文件错误，默认安装包目录文件名为：Catalog.json", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    else
-                    {
-                        MessageBox.Show("The offline installation package catalog file error.The default installation package catalog file name is: Catalog.json", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    MessageBox.Show($@"{language[currentLanguage].MsgCatalogFileNameError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
             }
@@ -249,34 +222,20 @@ namespace VSOfflineInstallCleaner
             string vs_setup = vsOfflineDirectory + "\\vs_setup.exe";
             if (!File.Exists(catalogFileName) || !File.Exists(vs_installer) || !File.Exists(vs_setup))
             {
-                if (language == "zh-CN")
-                {
-                    MessageBox.Show("安装包目录文件所在的文件夹不是有效的 Visual Studio 离线安装包文件夹，该文件夹下应包含：Catalog.json、vs_installer.opc、vs_setup.exe 等文件。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    MessageBox.Show("The folder where the installation package catalog file is not the Visual Studio offline installation package folder.This folder should contain files such as Catalog.json, vs_installer.opc, and vs_setup.exe.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show($@"{language[currentLanguage].MsgCatalogFolderError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             //获取版本信息
             Catalog vsInfo = new CleanVs().GetInfo(catalogFileName);
-            if (vsInfo == null || String.IsNullOrEmpty(vsInfo.Info.ProductName) || vsInfo.Info.ProductName!= "Visual Studio") 
+            if (vsInfo == null || String.IsNullOrEmpty(vsInfo.Info.ProductName) || vsInfo.Info.ProductName != "Visual Studio")
             {
-                if (language == "zh-CN")
-                {
-                    MessageBox.Show("离线安装包目录文件没有包含有效的安装信息。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    MessageBox.Show("The offline installation package catalog file does not contain valid installation information", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                return; 
+                MessageBox.Show($@"{language[currentLanguage].MsgCatalogContentsError}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
 
-            string Info = "  [ " + vsInfo.Info.ProductName + " " + vsInfo.Info.ProductLineVersion + "  V" + vsInfo.Info.ProductDisplayVersion +" ]";
-            this.Text = titleText + Info;
+            string Info = "  [ " + vsInfo.Info.ProductName + " " + vsInfo.Info.ProductLineVersion + "  V" + vsInfo.Info.ProductDisplayVersion + " ]";
+            this.Text = title + Info;
 
             //文件夹名称
             HashSet<string> folderNames = new CleanVs().GetFolderNames(vsOfflineDirectory);
@@ -289,11 +248,13 @@ namespace VSOfflineInstallCleaner
 
             if (pakagesTobeMoved.Count() > 0)
             {
-                btnClean.Enabled = true;
+                button2.Enabled = true;
+                button3.Enabled = true;
             }
             else
             {
-                btnClean.Enabled = false;
+                button2.Enabled = false;
+                button3.Enabled = false;
             }
 
             DataTable dataTable = new DataTable();
@@ -340,5 +301,7 @@ namespace VSOfflineInstallCleaner
                 headerBounds,
                 centerFormat);
         }
+
+        
     }
 }
